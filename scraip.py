@@ -251,7 +251,7 @@ def check_value_time(key_str, time_str):
         datetime.datetime.strptime(time_str, '%H:%M:%S.%f')
     except ValueError:
         # 日付として正しくない場合
-        raise ValueError("「" + key_str + "」の日付の形式はhh:mm:ssの形式で記載して下さい。config.iniの設定を確認して下さい。")
+        raise ValueError("「" + key_str + "」の日付の形式は「hh:mm:ss.ffffff」の形式で記載して下さい。config.iniの設定を確認して下さい。")
     return
 
 def check_value_decimal(key_str, value_str):
