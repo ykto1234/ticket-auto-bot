@@ -57,13 +57,13 @@ def login(url, id, pw, id_sel, pw_sel, display):
     return driver
 
 
-def check_ticket_page(driver, url, limit, interval, ticket_dic):
+def check_ticket_page(driver, url, limit, interval, ticket_dic, start_time):
 
     Mypage_manu_sel = "section#mypageMenu"
     WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, Mypage_manu_sel))
     )
-
+    # チケット販売ページに遷移
     driver.get(url)
 
     # ループ処理
@@ -72,8 +72,22 @@ def check_ticket_page(driver, url, limit, interval, ticket_dic):
     # 監視するチケットのセレクトボックスのインデックス
     first_target_selectbox = next(iter(ticket_dic))
 
+    logger.info("公開開始時間まで待機開始")
+    print("公開開始時間まで待機開始")
+
+    # 公開開始時間まで待機開始
     while True:
-        check_flg = False
+        now_time = datetime.datetime.now().strftime('%H:%M:%S.%f')
+        # print("現在時刻：" + now_time)
+        # print("公開開始時刻：" + start_time)
+        if now_time >= start_time:
+            break
+
+    logger.info("公開開始時間になったため、監視を開始")
+    print("公開開始時間になったため、監視を開始")
+
+    while True:
+        check_flg = True
 
         # ターゲット出現を待機
         Ticket_sel = "section#ticket"
@@ -91,10 +105,12 @@ def check_ticket_page(driver, url, limit, interval, ticket_dic):
                 select_ticket_ele = driver.find_elements_by_css_selector(Ticket_select_sel)
                 select_ticket = Select(select_ticket_ele[int(ticket_key) - 1])
                 select_ticket.select_by_value(ticket_dic[ticket_key])
+                check_flg = False
+                logger.info(ticket_key + "番目のチケットが選択完了")
             else:
                 # 非活性の場合
-                check_flg = True
-                break
+                logger.info(ticket_key + "番目のチケットが選択できない状態")
+                pass
 
         if check_flg:
             if count > int(limit):
@@ -120,6 +136,7 @@ def check_ticket_page(driver, url, limit, interval, ticket_dic):
 def pay_info_input(driver, conveni_index):
 
     logger.info("支払処理を開始")
+    print("支払処理を開始")
 
     # 購入ボタン
     SUBMIT_btn_sel = "li#submit-btn > button"
@@ -157,14 +174,18 @@ def pay_info_input(driver, conveni_index):
     WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, SUBMIT_btn_sel))
     )
-    if PAY_CLICK_FLG == "1":
-        logger.info("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリック")
-        print("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリックします")
-        submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
-        driver.execute_script("arguments[0].click();", submit_button)
-    else:
-        logger.info("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしない")
-        print("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしません")
+    submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
+    driver.execute_script("arguments[0].click();", submit_button)
+    logger.info("購入するボタンをクリック")
+    print("購入するボタンをクリックしました")
+    # if PAY_CLICK_FLG == "1":
+    #     logger.info("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリック")
+    #     print("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリックします")
+    #     submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
+    #     driver.execute_script("arguments[0].click();", submit_button)
+    # else:
+    #     logger.info("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしない")
+    #     print("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしません")
 
 
 def expexpiration_date_check():
@@ -191,7 +212,7 @@ def main_job():
     # ログイン処理
     driver = login(LOGIN_URL, ID, PASS, ID_sel, PASS_sel, DISPLAY)
 
-    ret = check_ticket_page(driver, TARGET_URL, LIMIT_COUNT, INTERVAL, ticket_dic)
+    ret = check_ticket_page(driver, TARGET_URL, LIMIT_COUNT, INTERVAL, ticket_dic, START_TIME)
     logger.debug("チケットページ監視結果：" + str(ret))
 
     global exit_flg
@@ -227,7 +248,7 @@ def check_value_date(key_str, date_str):
 
 def check_value_time(key_str, time_str):
     try:
-        datetime.datetime.strptime(time_str, '%H:%M:%S')
+        datetime.datetime.strptime(time_str, '%H:%M:%S.%f')
     except ValueError:
         # 日付として正しくない場合
         raise ValueError("「" + key_str + "」の日付の形式はhh:mm:ssの形式で記載して下さい。config.iniの設定を確認して下さい。")
@@ -267,7 +288,7 @@ if __name__ == '__main__':
         DISPLAY = config_default.get('DISPLAY')
         if DISPLAY == None or DISPLAY == "":
             # 値が存在しない場合
-            DISPLAY = "1"
+            DISPLAY = "0"
 
         # IDの取得
         ID = config_default.get('ID')
@@ -295,7 +316,17 @@ if __name__ == '__main__':
         check_value_empty('START_TIME', START_TIME)
         check_value_time('START_TIME', START_TIME)
 
+        # 監視開始時間を取得（公開開始時間の1分前）
+        # start_datetime = datetime.datetime.strptime(START_TIME, '%H:%M:%S')
+        start_datetime = datetime.datetime.strptime(START_TIME, '%H:%M:%S.%f')
+        monitor_datetime = start_datetime - datetime.timedelta(minutes=1)
+        monitor_max_datetime = monitor_datetime + datetime.timedelta(seconds=5)
+        # monitor_str = monitor_datetime.strftime('%H:%M:%S')
+        monitor_str = monitor_datetime.strftime('%H:%M:%S.%f')
+        monitor_max_str = monitor_max_datetime.strftime('%H:%M:%S.%f')
+
         # -------------設定ファイル（チケット情報）読み込み-------------
+        logger.debug("INIファイルのTICKET_INFOセクション読み込み")
         config_ticketinfo = settings.read_config('TICKET_INFO')
         # チケット購入辞書（キー：購入チケットインデックス、値：購入チケット枚数）
         ticket_dic = {}
@@ -309,6 +340,8 @@ if __name__ == '__main__':
                 if not 1 <= int(ticket_count) <= 2:
                     raise ValueError("「TICKET_COUNT" + str(index) + "」は1か2を記載して下さい。config.iniの設定を確認して下さい。")
                 ticket_dic[ticket_num] = ticket_count
+                logger.debug("チケット情報（TICKET_NUM" + str(index) + "）：" + ticket_num)
+                logger.debug("チケット情報（TICKET_COUNT" + str(index) + "）：" + ticket_count)
             else:
                 continue
 
@@ -316,12 +349,8 @@ if __name__ == '__main__':
             raise ValueError("購入対象のチケットがありません。config.iniの設定を確認して下さい。")
 
         # -------------設定ファイル（支払い情報）読み込み-------------
+        logger.debug("INIファイルのPAYINFOセクション読み込み")
         config_payinfo = settings.read_config('PAYINFO')
-
-        # 支払い方法の読み込み
-        # PAY_METHOD = config_payinfo.get('PAY_METHOD')
-        # check_value_empty('PAY_METHOD', PAY_METHOD)
-        # check_value_decimal('PAY_METHOD', PAY_METHOD)
 
         # 対象コンビニの読み込み
         CONVENI_STORE = config_payinfo.get('CONVENI_STORE')
@@ -331,28 +360,38 @@ if __name__ == '__main__':
             raise ValueError("「CONVENI_STORE」は1～5を記載して下さい。config.iniの設定を確認して下さい。")
 
         # 購入するボタンクリックフラグ
-        PAY_CLICK_FLG = config_payinfo.get('PAY_CLICK_FLG')
-        if PAY_CLICK_FLG == None or PAY_CLICK_FLG == "":
-            # 値が存在しない場合
-            PAY_CLICK_FLG = "0"
+        # PAY_CLICK_FLG = config_payinfo.get('PAY_CLICK_FLG')
+        # if PAY_CLICK_FLG == None or PAY_CLICK_FLG == "":
+        #     # 値が存在しない場合
+        #     PAY_CLICK_FLG = "1"
 
         print("-----------------------------------------------------------------------------")
         print("起動します")
         logger.info("プログラム起動")
-        logger.debug("監視開始時間：" + START_TIME)
+        logger.debug("公開開始時間：" + START_TIME)
+        logger.debug("監視開始時間：" + monitor_str)
         logger.debug("インターバル：" + INTERVAL)
         logger.debug("リトライ上限回数：" + LIMIT_COUNT)
-        logger.debug("支払いボタンクリックフラグ：" + PAY_CLICK_FLG)
+        logger.debug("監視対象URL：" + TARGET_URL)
+        logger.debug("ブラウザの表示・非表示：" + DISPLAY)
+        # logger.debug("支払いボタンクリックフラグ：" + PAY_CLICK_FLG)
 
-        schedule.every().day.at(START_TIME).do(main_job)
+        # schedule.every().day.at(monitor_str).do(main_job)
 
         logger.info("監視開始時間まで待機開始")
 
         while True:
             print("....監視開始時間まで待機中.....")
-            schedule.run_pending()
-            time.sleep(1)
-            if exit_flg > 0:
+            # schedule.run_pending()
+            time.sleep(1.0)
+            now_time = datetime.datetime.now().strftime('%H:%M:%S.%f')
+            if now_time >= monitor_str and now_time <= monitor_max_str:
+                # print("現在時刻：" + now_time)
+                # print("監視時刻：" + monitor_str)
+                # logger.debug("現在時刻：" + now_time)
+                # logger.debug("監視時刻：" + monitor_str)
+                main_job()
+
                 #『続行するには何かキーを押してください . . .』と表示させる
                 os.system('PAUSE')
                 sys.exit(0)
