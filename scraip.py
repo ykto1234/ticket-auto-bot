@@ -191,7 +191,7 @@ def pay_info_input(driver, conveni_index):
 def expexpiration_date_check():
     import datetime
     now = datetime.datetime.now()
-    expexpiration_datetime = now.replace(month=3, day=7, hour=12, minute=0, second=0, microsecond=0)
+    expexpiration_datetime = now.replace(month=4, day=7, hour=12, minute=0, second=0, microsecond=0)
     logger.info("有効期限：" + str(expexpiration_datetime))
     if now < expexpiration_datetime:
         return True
