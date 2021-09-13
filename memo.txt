@@ -1,0 +1,4 @@
+exeを作るときは以下のコマンド
+※今回はコンソールを使うので、「--noconsole」オプションは不要
+
+pyinstaller .\scraip.py --onefile

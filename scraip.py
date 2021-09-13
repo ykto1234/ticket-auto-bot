@@ -81,10 +81,14 @@ def check_ticket_page(driver, url, limit, interval, ticket_dic, start_time):
         # print("現在時刻：" + now_time)
         # print("公開開始時刻：" + start_time)
         if now_time >= start_time:
+            print(start_time)
             break
 
     logger.info("公開開始時間になったため、監視を開始")
     print("公開開始時間になったため、監視を開始")
+
+    # ページを再読み込み
+    driver.refresh()
 
     while True:
         check_flg = True
@@ -133,7 +137,7 @@ def check_ticket_page(driver, url, limit, interval, ticket_dic, start_time):
         return True
 
 
-def pay_info_input(driver, conveni_index):
+def pay_info_input(driver, pay_method='1', conveni_index=None):
 
     logger.info("支払処理を開始")
     print("支払処理を開始")
@@ -145,22 +149,35 @@ def pay_info_input(driver, conveni_index):
     )
 
     # 購入内容はあるか確認
+    Credit_btn_sel = "p#credit_card_select_img"
     Conveni_btn_sel = "p#other_payment_method_select_img"
-    if len(driver.find_elements_by_css_selector(Conveni_btn_sel)):
-        # コンビニ決済ボタン
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, Conveni_btn_sel))
-        )
-        driver.find_elements_by_css_selector(Conveni_btn_sel)[0].click()
 
-        # コンビニ選択
-        Conveni_btn_sel = "select#cvs_select"
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, Conveni_btn_sel))
-        )
-        select_cvs_ele = driver.find_elements_by_css_selector(Conveni_btn_sel)
-        select_cvs = Select(select_cvs_ele[0])
-        select_cvs.select_by_index(conveni_index)
+    if pay_method == '1':
+        # クレジットカード支払いの場合
+        if len(driver.find_elements_by_css_selector(Credit_btn_sel)):
+            # コンビニ決済ボタン
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, Credit_btn_sel))
+            )
+            driver.find_elements_by_css_selector(Credit_btn_sel)[0].click()
+
+    elif pay_method == '2':
+        # コンビニ支払いの場合
+        if len(driver.find_elements_by_css_selector(Conveni_btn_sel)):
+            # コンビニ決済ボタン
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, Conveni_btn_sel))
+            )
+            driver.find_elements_by_css_selector(Conveni_btn_sel)[0].click()
+
+            # コンビニ選択
+            Conveni_btn_sel = "select#cvs_select"
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, Conveni_btn_sel))
+            )
+            select_cvs_ele = driver.find_elements_by_css_selector(Conveni_btn_sel)
+            select_cvs = Select(select_cvs_ele[0])
+            select_cvs.select_by_index(conveni_index)
 
     # 同意チェックボックス
     Agreement_chkbox_sel = "input#agreement_check_lp"
@@ -174,24 +191,24 @@ def pay_info_input(driver, conveni_index):
     WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, SUBMIT_btn_sel))
     )
-    submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
-    driver.execute_script("arguments[0].click();", submit_button)
-    logger.info("購入するボタンをクリック")
-    print("購入するボタンをクリックしました")
-    # if PAY_CLICK_FLG == "1":
-    #     logger.info("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリック")
-    #     print("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリックします")
-    #     submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
-    #     driver.execute_script("arguments[0].click();", submit_button)
-    # else:
-    #     logger.info("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしない")
-    #     print("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしません")
+    # submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
+    # driver.execute_script("arguments[0].click();", submit_button)
+    # logger.info("購入するボタンをクリック")
+    # print("購入するボタンをクリックしました")
+    if PAY_CLICK_FLG == "1":
+        logger.info("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリック")
+        print("購入するボタンクリックフラグが「1：クリックする」のため、支払うボタンをクリックします")
+        submit_button = driver.find_elements_by_css_selector(SUBMIT_btn_sel)[0]
+        driver.execute_script("arguments[0].click();", submit_button)
+    else:
+        logger.info("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしない")
+        print("購入するボタンクリックフラグが「0：クリックしない」のため、支払うボタンをクリックしません")
 
 
 def expexpiration_date_check():
     import datetime
     now = datetime.datetime.now()
-    expexpiration_datetime = now.replace(month=4, day=7, hour=12, minute=0, second=0, microsecond=0)
+    expexpiration_datetime = now.replace(month=9, day=25, hour=0, minute=0, second=0, microsecond=0)
     logger.info("有効期限：" + str(expexpiration_datetime))
     if now < expexpiration_datetime:
         return True
@@ -226,7 +243,7 @@ def main_job():
         return
 
     # 決済処理
-    pay_info_input(driver, CONVENI_STORE)
+    pay_info_input(driver, PAY_METHOD, CONVENI_STORE)
     logger.info("決済情報入力処理が完了")
     exit_flg +=2
     return
@@ -288,7 +305,7 @@ if __name__ == '__main__':
         DISPLAY = config_default.get('DISPLAY')
         if DISPLAY == None or DISPLAY == "":
             # 値が存在しない場合
-            DISPLAY = "0"
+            DISPLAY = "1"
 
         # IDの取得
         ID = config_default.get('ID')
@@ -352,18 +369,26 @@ if __name__ == '__main__':
         logger.debug("INIファイルのPAYINFOセクション読み込み")
         config_payinfo = settings.read_config('PAYINFO')
 
+        # お支払い方法の読み込み
+        PAY_METHOD = config_payinfo.get('PAY_METHOD')
+        check_value_empty('PAY_METHOD', PAY_METHOD)
+        check_value_decimal('PAY_METHOD', PAY_METHOD)
+        if not 1 <= int(PAY_METHOD) <= 2:
+            raise ValueError("「PAY_METHOD」は1～2を記載して下さい。config.iniの設定を確認して下さい。")
+
         # 対象コンビニの読み込み
         CONVENI_STORE = config_payinfo.get('CONVENI_STORE')
-        check_value_empty('CONVENI_STORE', CONVENI_STORE)
-        check_value_decimal('CONVENI_STORE', CONVENI_STORE)
-        if not 1 <= int(CONVENI_STORE) <= 5:
-            raise ValueError("「CONVENI_STORE」は1～5を記載して下さい。config.iniの設定を確認して下さい。")
+        if PAY_METHOD == '2':
+            check_value_empty('CONVENI_STORE', CONVENI_STORE)
+            check_value_decimal('CONVENI_STORE', CONVENI_STORE)
+            if not 1 <= int(CONVENI_STORE) <= 5:
+                raise ValueError("「CONVENI_STORE」は1～5を記載して下さい。config.iniの設定を確認して下さい。")
 
         # 購入するボタンクリックフラグ
-        # PAY_CLICK_FLG = config_payinfo.get('PAY_CLICK_FLG')
-        # if PAY_CLICK_FLG == None or PAY_CLICK_FLG == "":
-        #     # 値が存在しない場合
-        #     PAY_CLICK_FLG = "1"
+        PAY_CLICK_FLG = config_payinfo.get('PAY_CLICK_FLG')
+        if PAY_CLICK_FLG == None or PAY_CLICK_FLG == "":
+            # 値が存在しない場合
+            PAY_CLICK_FLG = "1"
 
         print("-----------------------------------------------------------------------------")
         print("起動します")
@@ -374,7 +399,7 @@ if __name__ == '__main__':
         logger.debug("リトライ上限回数：" + LIMIT_COUNT)
         logger.debug("監視対象URL：" + TARGET_URL)
         logger.debug("ブラウザの表示・非表示：" + DISPLAY)
-        # logger.debug("支払いボタンクリックフラグ：" + PAY_CLICK_FLG)
+        logger.debug("支払いボタンクリックフラグ：" + PAY_CLICK_FLG)
 
         # schedule.every().day.at(monitor_str).do(main_job)
 
