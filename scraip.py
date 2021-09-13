@@ -286,10 +286,10 @@ if __name__ == '__main__':
         logger.info("プログラム起動開始")
 
         # 有効期限チェック
-        if not (expexpiration_date_check()):
-            logger.info("有効期限切れため、プログラム起動終了")
-            print("有効期限切れのため、処理を終了します")
-            sys.exit(0)
+        # if not (expexpiration_date_check()):
+        #     logger.info("有効期限切れため、プログラム起動終了")
+        #     print("有効期限切れのため、処理を終了します")
+        #     sys.exit(0)
 
         # タスク終了フラグ
         exit_flg = 0
